@@ -1,9 +1,12 @@
 import os
-from dotenv import load_dotenv
 import json
 import urllib.request
 
-loaded = load_dotenv()
+try:
+    from dotenv import load_dotenv
+    loaded = load_dotenv()
+except ImportError:
+        loaded = False
 
 print("Loaded:", loaded)
 print("API key:", os.getenv("GEMINI_API_KEY"))
@@ -15,8 +18,13 @@ def call_with_sdk():
         print("Install the SDK: pip install google-genai")
         return
     
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        print("Set GEMINI_API_KEY environment variable first")
+        return
+    
     client = genai.Client(
-        api_key = os.environ["GEMINI_API_KEY"]
+        api_key=api_key
     )
     response = client.models.generate_content(
         model = 'gemini-3.5-flash-lite',

@@ -193,11 +193,6 @@ function parseReadme(content, roadmapStatuses) {
           }
         }
 
-        // If it has a link, it's at least complete (override roadmap if needed)
-        if (url && status === 'planned') {
-          status = 'complete';
-        }
-
         // Capstone tables use the middle column for prerequisite phase tokens
         // (e.g., "P11 P13 P14"), not a Build/Learn enum. Keep `type` on the
         // Build/Learn axis so CSS selectors (data-type="Build"/"Learn") stay

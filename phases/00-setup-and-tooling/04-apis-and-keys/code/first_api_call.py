@@ -2,6 +2,12 @@ import os
 import json
 import urllib.request
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 
 def call_with_sdk():
     try:
@@ -12,7 +18,7 @@ def call_with_sdk():
 
     client = anthropic.Anthropic()
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-haiku-4-5-20251001",
         max_tokens=256,
         messages=[{"role": "user", "content": "What is a neural network in one sentence?"}]
     )
@@ -33,16 +39,20 @@ def call_raw_http():
         "anthropic-version": "2023-06-01",
     }
     body = json.dumps({
-        "model": "claude-sonnet-4-20250514",
+        "model": "claude-haiku-4-5-20251001",
         "max_tokens": 256,
         "messages": [{"role": "user", "content": "What is a neural network in one sentence?"}],
     }).encode()
 
     req = urllib.request.Request(url, data=body, headers=headers, method="POST")
-    with urllib.request.urlopen(req) as resp:
-        result = json.loads(resp.read())
-        print(f"Raw HTTP response: {result['content'][0]['text']}")
-        print(f"Tokens used: {result['usage']['input_tokens']} in, {result['usage']['output_tokens']} out")
+    try:
+        with urllib.request.urlopen(req) as resp:
+            result = json.loads(resp.read())
+            print(f"Raw HTTP response: {result['content'][0]['text']}")
+            print(f"Tokens used: {result['usage']['input_tokens']} in, {result['usage']['output_tokens']} out")
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="replace")
+        print(f"HTTP {e.code}: {err_body[:300]}")
 
 
 if __name__ == "__main__":

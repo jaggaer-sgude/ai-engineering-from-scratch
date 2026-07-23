@@ -1854,37 +1854,59 @@
       function fetchLesson(path) {
         // Fetch docs from the branch this site was built from (set by build.js
         // via build-meta.js), so PR preview deploys render their own lesson
-        // edits instead of always pulling main. Falls back to main.
+        // edits instead of always pulling main. Falls back to main, then to a
+        // local file path for offline / local preview.
+        var repo = 'rohitg00/ai-engineering-from-scratch';
         var ref = (typeof window !== 'undefined' && window.__AIFS_REF) ? window.__AIFS_REF : 'main';
-        var base = 'https://raw.githubusercontent.com/rohitg00/ai-engineering-from-scratch/' + ref + '/';
-        var rawUrl = base + path + '/docs/en.md';
-        var quizUrl = base + path + '/quiz.json';
+        var localBase = '../phases/';
 
-        fetch(rawUrl)
-          .then(function (res) {
-            if (!res.ok) throw new Error('fetch-failed');
-            return res.text();
-          })
-          .then(function (md) {
-            try {
-              renderLesson(md);
-            } catch (err) {
-              console.error('renderLesson failed', err);
-              showError('Render error', 'Loaded the lesson markdown but failed to render it. Details in the browser console.');
-              return;
-            }
-            fetch(quizUrl)
-              .then(function (res) { return res.ok ? res.json() : null; })
-              .catch(function () { return null; })
-              .then(function (data) {
-                if (!data) return;
-                try { renderQuiz(data); }
-                catch (err) { console.error('renderQuiz failed', err); }
-              });
-          })
-          .catch(function () {
+        function ghUrl(r, suffix) {
+          return 'https://raw.githubusercontent.com/' + repo + '/' + r + '/' + path + '/' + suffix;
+        }
+
+        var sources = [];
+        if (ref !== 'main') {
+          sources.push({ md: ghUrl(ref, 'docs/en.md'), quiz: ghUrl(ref, 'quiz.json') });
+        }
+        sources.push({ md: ghUrl('main', 'docs/en.md'), quiz: ghUrl('main', 'quiz.json') });
+        if (window.location.protocol !== 'file:') {
+          sources.push({ md: localBase + path + '/docs/en.md', quiz: localBase + path + '/quiz.json' });
+        }
+
+        function loadFrom(src) {
+          return fetch(src.md)
+            .then(function (res) {
+              if (!res.ok) throw new Error('fetch-failed');
+              return res.text();
+            })
+            .then(function (md) {
+              try {
+                renderLesson(md);
+              } catch (err) {
+                console.error('renderLesson failed', err);
+                showError('Render error', 'Loaded the lesson markdown but failed to render it. Details in the browser console.');
+                return;
+              }
+              fetch(src.quiz)
+                .then(function (res) { return res.ok ? res.json() : null; })
+                .catch(function () { return null; })
+                .then(function (data) {
+                  if (!data) return;
+                  try { renderQuiz(data); }
+                  catch (err) { console.error('renderQuiz failed', err); }
+                });
+            });
+        }
+
+        function trySource(i) {
+          if (i >= sources.length) {
             showError('Lesson not found', 'Could not fetch the lesson at <code>' + escapeHtml(path) + '</code>. It may not have been written yet.');
-          });
+            return;
+          }
+          loadFrom(sources[i]).catch(function () { trySource(i + 1); });
+        }
+
+        trySource(0);
       }
 
       function showError(title, msg) {
